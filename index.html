@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guess the Series</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; justify-content: center; }
+    .app { width: 100%; max-width: 680px; min-height: 100vh; display: flex; flex-direction: column; padding: 16px; gap: 12px; }
+    h1 { margin: 0; font-size: 1.6rem; }
+    .sub { margin: 0; color: #94a3b8; font-size: 0.95rem; }
+    .temp { background: #1e293b; border-radius: 12px; padding: 12px 16px; }
+    .temp-top { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 6px; }
+    .temp input { width: 100%; }
+    .temp small { color: #94a3b8; display: block; margin-top: 6px; }
+    #chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px 0; min-height: 280px; }
+    .msg { padding: 10px 14px; border-radius: 14px; max-width: 85%; line-height: 1.4; white-space: pre-wrap; }
+    .bot { background: #1e293b; align-self: flex-start; }
+    .user { background: #2563eb; align-self: flex-end; }
+    .note { align-self: center; color: #94a3b8; font-size: 0.85rem; font-style: italic; }
+    form { display: flex; gap: 8px; }
+    #input { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 1rem; }
+    button { padding: 12px 16px; border: none; border-radius: 10px; background: #f97316; color: white; font-size: 1rem; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #newgame { background: #334155; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>🕵️ Guess the Series</h1>
+    <p class="sub">I'm thinking of a TV series. Ask for clues and try to guess it!</p>
+
+    <div class="temp">
+      <div class="temp-top">
+        <span>❄️ Cold (precise)</span>
+        <strong id="tempValue">Temperature: 0.7</strong>
+        <span>Hot (creative) 🔥</span>
+      </div>
+      <input type="range" id="temp" min="0" max="1.5" step="0.1" value="0.7" />
+      <small>Low temperature = predictable, formal clues. High temperature = unpredictable, creative and funny clues.</small>
+    </div>
+
+    <div id="chat"></div>
+
+    <form id="form">
+      <input id="input" placeholder="Type your guess or ask for a clue..." autocomplete="off" />
+      <button id="send" type="submit">Send</button>
+    </form>
+    <button id="newgame" type="button">🔄 New game</button>
+  </div>
+
+  <script>
+    const SERIES = [
+      "Breaking Bad", "Stranger Things", "Game of Thrones", "Friends", "The Office",
+      "Squid Game", "The Crown", "Black Mirror", "Money Heist", "Wednesday",
+      "The Simpsons", "Peaky Blinders", "The Witcher", "Sherlock", "Lost",
+      "Euphoria", "Succession", "The Mandalorian", "Gossip Girl", "Emily in Paris"
+    ];
+
+    const chat = document.getElementById("chat");
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("send");
+    const tempSlider = document.getElementById("temp");
+    const tempValue = document.getElementById("tempValue");
+
+    let secret = "";
+    let history = [];
+
+    function addMessage(text, cls) {
+      const div = document.createElement("div");
+      div.className = "msg " + cls;
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function addNote(text) {
+      const div = document.createElement("div");
+      div.className = "note";
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function askBot() {
+      sendBtn.disabled = true;
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: history,
+            temperature: parseFloat(tempSlider.value),
+            secret: secret
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Request failed");
+        history.push({ role: "assistant", content: data.reply });
+        addMessage(data.reply, "bot");
+      } catch (err) {
+        addNote("Error: " + err.message);
+      }
+      sendBtn.disabled = false;
+      input.focus();
+    }
+
+    function newGame() {
+      chat.innerHTML = "";
+      secret = SERIES[Math.floor(Math.random() * SERIES.length)];
+      history = [{ role: "user", content: "Start the game and give me the first clue." }];
+      askBot();
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      history.push({ role: "user", content: text });
+      addMessage(text, "user");
+      askBot();
+    });
+
+    tempSlider.addEventListener("input", () => {
+      tempValue.textContent = "Temperature: " + tempSlider.value;
+    });
+
+    tempSlider.addEventListener("change", () => {
+      addNote("🌡️ Temperature changed to " + tempSlider.value + ". The next answers will use it.");
+    });
+
+    document.getElementById("newgame").addEventListener("click", newGame);
+
+    newGame();
+  </script>
+</body>
+</html>
