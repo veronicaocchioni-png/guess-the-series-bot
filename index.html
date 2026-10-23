@@ -15,7 +15,8 @@
       --user: #1f2937;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; transition: background 0.6s ease; }
     .app { width: 100%; max-width: 720px; min-height: 100vh; display: flex; flex-direction: column; padding: 28px 18px; gap: 16px; }
     h1 { margin: 0; font-size: 3.2rem; line-height: 1.05; letter-spacing: -1px; }
     .sub { margin: 0; color: var(--muted); font-size: 1.1rem; font-family: system-ui, sans-serif; }
@@ -83,6 +84,28 @@
 
     let secret = "";
     let history = [];
+        // Background color follows the temperature: cold blue -> warm cream -> hot orange
+    function updateBackground() {
+      const t = parseFloat(tempSlider.value) / 1.2; // 0 to 1
+      let color;
+      if (t <= 0.5) {
+        // cold (light blue) -> neutral (cream)
+        const k = t / 0.5;
+        color = mix([219, 234, 254], [247, 243, 236], k);
+      } else {
+        // neutral (cream) -> hot (light orange)
+        const k = (t - 0.5) / 0.5;
+        color = mix([247, 243, 236], [254, 215, 170], k);
+      }
+      document.body.style.background = color;
+    }
+
+    function mix(a, b, k) {
+      const r = Math.round(a[0] + (b[0] - a[0]) * k);
+      const g = Math.round(a[1] + (b[1] - a[1]) * k);
+      const bl = Math.round(a[2] + (b[2] - a[2]) * k);
+      return "rgb(" + r + "," + g + "," + bl + ")";
+    }
 
     function addMessage(text, cls) {
       const div = document.createElement("div");
@@ -144,13 +167,15 @@
       tempValue.textContent = "Temperature: " + tempSlider.value;
     });
 
-    tempSlider.addEventListener("change", () => {
-      addNote("🌡️ Temperature changed to " + tempSlider.value + ". The next answers will use it.");
-    });
+    tempSlider.addEventListener("input", () => {
+  tempValue.textContent = "Temperature: " + tempSlider.value;
+  updateBackground();
+});
 
     document.getElementById("newgame").addEventListener("click", newGame);
 
-    newGame();
+    updateBackground();
+newGame();
   </script>
 </body>
 </html>
