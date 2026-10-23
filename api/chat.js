@@ -15,15 +15,20 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: "Invalid request" });
     }
 
-    const temp = Math.min(Math.max(Number(temperature) || 0, 0), 1.5);
+    // Max 1.2 keeps the creative answers readable
+    const temp = Math.min(Math.max(Number(temperature) || 0, 0), 1.2);
 
     let style;
-    if (temp <= 0.4) {
-      style = "Use a formal, precise and straightforward tone. Give factual, accurate clues.";
-    } else if (temp <= 0.9) {
-      style = "Use a friendly, balanced tone. Mix factual clues with a little personality.";
+    if (temp <= 0.2) {
+      style = "STYLE: very cold. Be extremely formal and literal, like an encyclopedia entry. Use short, dry, factual sentences. No jokes, no metaphors, no exclamation marks, no personality at all.";
+    } else if (temp <= 0.5) {
+      style = "STYLE: cool. Be polite, clear and professional. Give accurate, straightforward clues. Light and neutral tone, no jokes.";
+    } else if (temp <= 0.8) {
+      style = "STYLE: warm. Be friendly and conversational, like a helpful friend. Add a little personality, but keep the clues clear.";
+    } else if (temp <= 1.0) {
+      style = "STYLE: hot. Be playful and funny. Describe the clues with humor, fun comparisons and a bit of sarcasm. Use simple everyday English.";
     } else {
-      style = "Use a playful, humorous and unconventional tone. Give creative, quirky clues with jokes and unexpected angles.";
+      style = "STYLE: very hot. Be wild, dramatic and hilarious, like an over-excited game show host. Use funny comparisons, silly exaggerations and unexpected angles for the clues. IMPORTANT: always use simple, everyday English and short sentences. Never use rare words, poetry or confusing wording.";
     }
 
     const systemPrompt = `You are the host of a game called "Guess the Series".
@@ -42,7 +47,8 @@ Rules:
 - If the guess is correct, congratulate the user and tell them to press "New game" to play again.
 - After 5 clues without a correct guess, offer to reveal the answer.
 - Keep answers short (max 3 sentences).
-Style: ${style}`;
+- Whatever the style, the clue must always be easy to understand and factually correct.
+${style}`;
 
     const safeMessages = messages.slice(-20).map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
